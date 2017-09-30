@@ -25,11 +25,31 @@ var json = {
                 "Ba":"Baaa",
                 "Bb":"Bbbb",
                 "Bc":"Bccc"
+            },
+            "ABB":{
+                "Ba":"Baaa",
+                "Bb":"Bbbb",
+                "Bc":"Bccc"
+            },
+            "ABC":{
+                "Ba":"Baaa",
+                "Bb":"Bbbb",
+                "Bc":"Bccc"
             }
         },
         "AC":{
             "content": "this is AC",
             "ACA":{
+                "Ca":"Caaa",
+                "Cb":"Cbbb",
+                "Cc":"Cccc"
+            },
+            "ACB":{
+                "Ca":"Caaa",
+                "Cb":"Cbbb",
+                "Cc":"Cccc"
+            },
+            "ACC":{
                 "Ca":"Caaa",
                 "Cb":"Cbbb",
                 "Cc":"Cccc"
@@ -39,6 +59,7 @@ var json = {
 }
 
 var camera, scene, renderer
+var cameraDistance = 250
 var cameraPositionQueue = []
 
 var objects = []
@@ -50,6 +71,41 @@ var sceneWebgl, rendererWebgl;
 window.onload = function(){
     setup();
     animate();
+}
+
+
+function setup() {
+
+    camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+	camera.position.z = cameraDistance;
+	scene = new THREE.Scene();
+
+    //vanishPt = new THREE.Vector3(0,0,-100);
+    //camera.lookAt(vanishPt);
+
+
+    createCvElements()
+
+    renderer = new THREE.CSS3DRenderer();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.domElement.style.position = 'absolute';
+	document.getElementById( 'container' ).appendChild( renderer.domElement );
+
+    //createParticles();
+}
+
+
+function animate() {
+    requestAnimationFrame( animate );
+    TWEEN.update();
+    render();
+}
+
+function render() {
+    //particleUpdate();
+    renderer.render( scene, camera );
+    //rendererWebgl.render( sceneWebgl, camera );
+    //cameraWander();
 }
 
 function transform(targets, duration){
@@ -116,9 +172,9 @@ function createDOM(
 
         if (JsonData[key] instanceof Object){
 
-            newNode.className = key + "-menu"
+            newNode.id = key + "-menu"
+            newNode.className = "menu"
             createDOM(newNode, JsonData[key])
-
 
             //create a button portal
             var btn = document.createElement("BUTTON")
@@ -131,7 +187,8 @@ function createDOM(
         }
         else {
 
-            newNode.className = key
+            //newNode.className = key
+            newNode.className = "panel"
             newNode.textContent = JsonData[key]
 
         }
@@ -144,7 +201,7 @@ function createDOM(
 
 function getPosition( depth, index, centerPosition ) {
 
-    var r = 1000 / ((depth + 1)*(depth + 1)) //radius depend on depth
+    var r = 1000 / (depth + 1) //radius depend on depth
 
     //root start from [0,0,0]
     if (depth == 0) {
@@ -157,7 +214,7 @@ function getPosition( depth, index, centerPosition ) {
 
         centerPosition[0] + r * Math.sin(Math.radians(index * 120)),  // x
         centerPosition[1] + r * Math.cos(Math.radians(index * 120)),  // y
-        centerPosition[2] //z
+        centerPosition[2] - (depth + 1) * 200//z
 
     ])
 
@@ -188,13 +245,6 @@ function createCSSobjs(
     scene.add( object )
     //
 
-    //set targets
-    var object = new THREE.Object3D();
-    object.position.x = 1000
-    object.position.y = 1000
-    object.position.z = 1000
-    targets.push( object );
-
 
     var children = currentNode.childNodes
     var k = 0
@@ -202,9 +252,9 @@ function createCSSobjs(
 
         //console.log( children[ i ] );
 
-        if ( children[ i ].className.indexOf("menu") != -1 ) {
+        if ( children[ i ].id.indexOf("menu") != -1 ) {
 
-            console.log(children[ i ].className);
+            console.log(children[ i ].id);
             createCSSobjs( children[ i ], currentNode, position, nodeDepth+1, k)
             k++
 
@@ -214,15 +264,19 @@ function createCSSobjs(
 
 }
 
-function createCvElements(){
+function cameraRollback() {
 
-    //tmp = document.createElement("div")
-    //tmp.className = "root"
-    var container = document.getElementById("container")
-    createDOM(container)
+    if ( cameraPositionQueue.length ) {
 
-    console.log(container.childNodes[2]);
-    createCSSobjs(container.childNodes[2], container )
+        var currentCameraPosition = cameraPositionQueue.pop()
+        console.log(currentCameraPosition)
+        moveCamera( currentCameraPosition, 1000)
+
+    }
+
+}
+
+function createEvents() {
 
     var btns = document.getElementsByClassName("myButton");
     console.log("myButtons: ", btns);
@@ -237,16 +291,16 @@ function createCvElements(){
             console.log(camera.position);
             console.log("objects: ", objects);
 
-            var targetClass = this.textContent + "-menu"
+            var targetId = this.textContent + "-menu"
             for ( var j = 0; j < objects.length; j++ ){
 
                     var object = objects[ j ]
-                    if (object.element.className == targetClass) {
+                    if (object.element.id == targetId) {
 
                         var tmp = new THREE.Object3D();
                         tmp.position.x = object.position.x
                         tmp.position.y = object.position.y
-                        tmp.position.z = 1000
+                        tmp.position.z = object.position.z + cameraDistance
                         //update lastCameraPosition
                         var currentCameraPosition = new THREE.Object3D()
                         currentCameraPosition.position.x = camera.position.x
@@ -268,16 +322,20 @@ function createCvElements(){
         console.log(e); // you can inspect the click event
 
         if (e.which === 3) { // right click = 3, left click = 1
-            console.log("right click");
-            if ( cameraPositionQueue ) {
 
-                var currentCameraPosition = cameraPositionQueue.pop()
-                console.log(currentCameraPosition)
-                moveCamera( currentCameraPosition, 1000)
+            //console.log("right click");
+            cameraRollback()
 
-            }
         }
     });
+
+    //double click on screen
+    document.addEventListener("dblclick", function() {
+
+        //console.log("double cllick!");
+        cameraRollback()
+
+    })
 
     // prevent context menu show up
     document.addEventListener('contextmenu', function(e) {
@@ -286,36 +344,19 @@ function createCvElements(){
 
 }
 
-function setup() {
+function createCvElements(){
 
-    camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
-	camera.position.z = 1000;
-	scene = new THREE.Scene();
+    //tmp = document.createElement("div")
+    //tmp.className = "root"
+    var container = document.getElementById("container")
+    createDOM(container)
 
-    //vanishPt = new THREE.Vector3(0,0,-100);
-    //camera.lookAt(vanishPt);
+    //console.log(container.childNodes[2]);
+    createCSSobjs(container.childNodes[2], container )
 
-
-    createCvElements()
-
-    renderer = new THREE.CSS3DRenderer();
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	renderer.domElement.style.position = 'absolute';
-	document.getElementById( 'container' ).appendChild( renderer.domElement );
-
-    //createParticles();
-}
+    //adding the event listeners
+    createEvents()
 
 
-function animate() {
-    requestAnimationFrame( animate );
-    TWEEN.update();
-    render();
-}
 
-function render() {
-    //particleUpdate();
-    renderer.render( scene, camera );
-    //rendererWebgl.render( sceneWebgl, camera );
-    //cameraWander();
 }
