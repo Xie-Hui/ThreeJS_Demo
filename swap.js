@@ -2,19 +2,45 @@ var json = {
     "A":{
         "title": "This is A",
         "AA":{
-            "content": "AAA"
+            "content": "this is AA",
+            "AAA":{
+                "Aa":"Aaaa",
+                "Ab":"Abbb",
+                "Ac":"Accc"
+            },
+            "AAB":{
+                "Aa":"Aaaa",
+                "Ab":"Abbb",
+                "Ac":"Accc"
+            },
+            "AAC":{
+                "Aa":"Aaaa",
+                "Ab":"Abbb",
+                "Ac":"Accc"
+            }
         },
         "AB":{
-            "content": "BBB"
+            "content": "this is AB",
+            "ABA":{
+                "Ba":"Baaa",
+                "Bb":"Bbbb",
+                "Bc":"Bccc"
+            }
         },
         "AC":{
-            "content": "CCC"
+            "content": "this is AC",
+            "ACA":{
+                "Ca":"Caaa",
+                "Cb":"Cbbb",
+                "Cc":"Cccc"
+            }
         }
     }
 }
 
 var camera, scene, renderer
-var vanishPt
+var cameraPositionQueue = []
+
 var objects = []
     targets = []
     locations = []
@@ -118,7 +144,7 @@ function createDOM(
 
 function getPosition( depth, index, centerPosition ) {
 
-    var r = 500 / (depth + 1) //radius depend on depth
+    var r = 1000 / ((depth + 1)*(depth + 1)) //radius depend on depth
 
     //root start from [0,0,0]
     if (depth == 0) {
@@ -220,7 +246,13 @@ function createCvElements(){
                         var tmp = new THREE.Object3D();
                         tmp.position.x = object.position.x
                         tmp.position.y = object.position.y
-                        tmp.position.z = 200
+                        tmp.position.z = 1000
+                        //update lastCameraPosition
+                        var currentCameraPosition = new THREE.Object3D()
+                        currentCameraPosition.position.x = camera.position.x
+                        currentCameraPosition.position.y = camera.position.y
+                        currentCameraPosition.position.z = camera.position.z
+                        cameraPositionQueue.push(currentCameraPosition)
                         moveCamera( tmp, 1000)
 
                     }
@@ -230,6 +262,27 @@ function createCvElements(){
         }, false);
 
     }
+
+    //right click to go back to previous camera position
+    document.addEventListener("mousedown", function(e) {
+        console.log(e); // you can inspect the click event
+
+        if (e.which === 3) { // right click = 3, left click = 1
+            console.log("right click");
+            if ( cameraPositionQueue ) {
+
+                var currentCameraPosition = cameraPositionQueue.pop()
+                console.log(currentCameraPosition)
+                moveCamera( currentCameraPosition, 1000)
+
+            }
+        }
+    });
+
+    // prevent context menu show up
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    }, false);
 
 }
 
